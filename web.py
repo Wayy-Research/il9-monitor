@@ -71,11 +71,17 @@ async def _fetch_data() -> dict[str, Any]:
         data["error"] = str(e)
         logger.error(f"Broker error: {e}")
 
-    # Kalshi market data (public)
+    # Kalshi market data (public elections API, no auth)
     try:
-        from wrdata.providers.kalshi_provider import KalshiProvider
-        provider = KalshiProvider()
-        data["markets"] = provider.fetch_markets(series_ticker="KXIL9D", limit=20)
+        import requests as req
+        resp = req.get(
+            "https://api.elections.kalshi.com/trade-api/v2/markets",
+            params={"series_ticker": "KXIL9D", "limit": 20},
+            headers={"Accept": "application/json"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data["markets"] = resp.json().get("markets", [])
     except Exception as e:
         logger.error(f"Market data error: {e}")
 
