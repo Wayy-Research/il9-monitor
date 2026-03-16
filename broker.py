@@ -72,11 +72,23 @@ class KalshiBroker:
             )
 
         # Load RSA private key for request signing
-        pk_bytes = _pk.encode("utf-8")
-        # Support both raw PEM and escaped newlines from .env
-        if "\\n" in _pk and "-----" in _pk:
-            pk_bytes = _pk.replace("\\n", "\n").encode("utf-8")
-        self._private_key = serialization.load_pem_private_key(pk_bytes, password=None)
+        # Support multiple formats:
+        #   1. Raw PEM with real newlines
+        #   2. PEM with escaped \n (from .env files)
+        #   3. Base64-encoded PEM (for env vars that mangle newlines)
+        pk_str = _pk.strip()
+        if "\\n" in pk_str and "-----" in pk_str:
+            pk_str = pk_str.replace("\\n", "\n")
+        elif not pk_str.startswith("-----"):
+            # Might be base64-encoded PEM
+            try:
+                import base64 as _b64
+                pk_str = _b64.b64decode(pk_str).decode("utf-8")
+            except Exception:
+                pass
+        self._private_key = serialization.load_pem_private_key(
+            pk_str.encode("utf-8"), password=None
+        )
 
         self._trading_url: str = DEMO_URL if demo else TRADING_URL
         self._elections_url: str = ELECTIONS_URL
