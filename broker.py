@@ -79,11 +79,15 @@ class KalshiBroker:
         #   4. Env var: base64-encoded PEM
         pk_str = _pk.strip()
 
-        # Check for key file first
+        # Check for key file first (most reliable for cloud deploys)
         key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kalshi_key.pem")
+        logger.info("Looking for key file at: %s (exists: %s)", key_file, os.path.exists(key_file))
         if os.path.exists(key_file):
-            with open(key_file) as f:
-                pk_str = f.read().strip()
+            with open(key_file, "rb") as f:
+                pk_bytes = f.read()
+            self._private_key = serialization.load_pem_private_key(pk_bytes, password=None)
+            logger.info("Loaded RSA key from file: %d bit", self._private_key.key_size)
+            return
         elif "\\n" in pk_str and "-----" in pk_str:
             pk_str = pk_str.replace("\\n", "\n")
         elif not pk_str.startswith("-----"):
