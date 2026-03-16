@@ -85,9 +85,8 @@ class KalshiBroker:
         if os.path.exists(key_file):
             with open(key_file, "rb") as f:
                 pk_bytes = f.read()
-            self._private_key = serialization.load_pem_private_key(pk_bytes, password=None)
-            logger.info("Loaded RSA key from file: %d bit", self._private_key.key_size)
-            return
+            pk_str = pk_bytes.decode("utf-8").strip()
+            logger.info("Loaded RSA key from file (%d bytes)", len(pk_bytes))
         elif "\\n" in pk_str and "-----" in pk_str:
             pk_str = pk_str.replace("\\n", "\n")
         elif not pk_str.startswith("-----"):
