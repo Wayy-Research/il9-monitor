@@ -38,8 +38,6 @@ async def _fetch_data() -> dict[str, Any]:
     if time.time() - _cache_ts < CACHE_TTL and _cache:
         return _cache
 
-    from broker import KalshiBroker
-
     data: dict[str, Any] = {
         "balance": 0,
         "positions": [],
@@ -53,7 +51,9 @@ async def _fetch_data() -> dict[str, Any]:
 
     # Kalshi authenticated data
     try:
-        async with KalshiBroker() as broker:
+        from broker import KalshiBroker
+        broker = KalshiBroker()
+        async with broker:
             bal = await broker.get_balance()
             data["balance"] = bal.get("balance", 0) / 100.0
 
@@ -68,8 +68,8 @@ async def _fetch_data() -> dict[str, Any]:
             fills = await broker.get_fills()
             data["fills"] = [f for f in fills if "KXIL9D" in f.get("ticker", "")][:20]
     except Exception as e:
-        data["error"] = str(e)
-        logger.error(f"Broker error: {e}")
+        data["error"] = f"Broker: {type(e).__name__}: {e}"
+        logger.error(f"Broker error: {e}", exc_info=True)
 
     # Kalshi market data (public elections API, no auth)
     try:
