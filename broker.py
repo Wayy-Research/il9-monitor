@@ -72,20 +72,27 @@ class KalshiBroker:
             )
 
         # Load RSA private key for request signing
-        # Support multiple formats:
-        #   1. Raw PEM with real newlines
-        #   2. PEM with escaped \n (from .env files)
-        #   3. Base64-encoded PEM (for env vars that mangle newlines)
+        # Try multiple sources/formats:
+        #   1. Key file next to this script (kalshi_key.pem)
+        #   2. Env var: raw PEM with real newlines
+        #   3. Env var: PEM with escaped \n
+        #   4. Env var: base64-encoded PEM
         pk_str = _pk.strip()
-        if "\\n" in pk_str and "-----" in pk_str:
+
+        # Check for key file first
+        key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kalshi_key.pem")
+        if os.path.exists(key_file):
+            with open(key_file) as f:
+                pk_str = f.read().strip()
+        elif "\\n" in pk_str and "-----" in pk_str:
             pk_str = pk_str.replace("\\n", "\n")
         elif not pk_str.startswith("-----"):
-            # Might be base64-encoded PEM
             try:
                 import base64 as _b64
                 pk_str = _b64.b64decode(pk_str).decode("utf-8")
             except Exception:
                 pass
+
         self._private_key = serialization.load_pem_private_key(
             pk_str.encode("utf-8"), password=None
         )
